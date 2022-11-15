@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -24,44 +25,34 @@ public class BLE extends Service {
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothGatt bluetoothGatt;
 
-    public static final String ACTION_BROADCAST = "com.example.a2.BROADCAST";
+    public static final String ACTION_BROADCAST = "com.example.a682a3.BROADCAST";
     public static final String TAG = "BluetoothLeService";
 
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "com.example.a682a3.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "com.example.a682a3.ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_DATA_AVAILABLE =
+            "com.example.a682a3.ACTION_DATA_AVAILABLE";
+
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTED = 2;
 
     private int connectionState;
+    private String deviceAddress = "84:2e:14:31:b3:7b";
 
 
-
-
-    public boolean initialize() {
+    public void initialize() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null) {
-            return false;
-        }
-        return true;
     }
 
-    public boolean connect(final String address) {
-        if (bluetoothAdapter == null || address == null) {
-            return false;
-        }
-        try {
-            final BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+    public void connect(final String address) {
+        final BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
 
-            }
-            bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
-            return true;
-        } catch (IllegalArgumentException exception) {
-            return false;
         }
+        bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallback);
         // connect to the GATT server on the device
     }
 
@@ -76,6 +67,23 @@ public class BLE extends Service {
                 broadcast(ACTION_GATT_DISCONNECTED);
             }
         }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcast(ACTION_DATA_AVAILABLE, characteristic);
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt,
+                                            BluetoothGattCharacteristic characteristic) {
+            broadcast(ACTION_DATA_AVAILABLE, characteristic);
+        }
+
+
     };
 
     class MyBinder extends Binder {
@@ -89,14 +97,11 @@ public class BLE extends Service {
     public BLE() {
     }
 
-
-
-
-
-
     public void onCreate(){
         super.onCreate();
         intent = new Intent(ACTION_BROADCAST);
+        initialize();
+        connect(deviceAddress);
     }
 
     public int onStartCommand(Intent intent, int flag, int startId){
@@ -137,8 +142,7 @@ public class BLE extends Service {
     }
 
 
-    public void broadcast(String action){
-        Intent intent = new Intent(action);
+    public void broadcast(){
         sendBroadcast(intent);
     }
 

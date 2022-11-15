@@ -29,22 +29,18 @@ public class MainActivity extends AppCompatActivity {
     private Intent intent;
 
 
-    private BluetoothLeScanner bluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
-    private boolean scanning;
+
+//    private BluetoothLeScanner bluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
+//    private boolean scanning;
     private Handler handler = new Handler();
 
     ServiceConnection conn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
+            mybinder = (BLE.MyBinder) binder;
             service = mybinder.getService();
-            if (service != null) {
-                if (!service.initialize()) {
-                    finish();
-                }
-                mybinder = (BLE.MyBinder) binder;
-                service.connect(deviceAddress);
-
-            }
+//            service.initialize();
+//            service.connect(deviceAddress);
         }
 
         @Override
@@ -52,10 +48,6 @@ public class MainActivity extends AppCompatActivity {
             service = null;
         }
     };
-
-
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,25 +63,15 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver gattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BLE.ACTION_GATT_CONNECTED.equals(action)) {
-                connected = true;
-                updateConnectionState(R.string.connected);
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                connected = false;
-                updateConnectionState(R.string.disconnected);
-            }
+            updateViews(intent);
         }
     };
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter());
-        if (service != null) {
-            final boolean result = service.connect(deviceAddress);
-        }
+        registerReceiver(gattUpdateReceiver, new IntentFilter(BLE.ACTION_BROADCAST));
+//        service.connect(deviceAddress);
     }
 
     @Override
@@ -98,14 +80,8 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(gattUpdateReceiver);
     }
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BLE.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BLE.ACTION_GATT_DISCONNECTED);
-        return intentFilter;
+    private void updateViews(Intent intent){
+
     }
-
-
-
 
 }
