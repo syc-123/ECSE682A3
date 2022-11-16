@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -24,9 +25,9 @@ public class BLE extends Service {
     private final Handler handler = new Handler();
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothGatt bluetoothGatt;
+    private BluetoothGattCharacteristic Step_data;
 
     public static final String ACTION_BROADCAST = "com.example.a682a3.BROADCAST";
-    public static final String TAG = "BluetoothLeService";
 
     public final static String ACTION_GATT_CONNECTED =
             "com.example.a682a3.ACTION_GATT_CONNECTED";
@@ -58,33 +59,24 @@ public class BLE extends Service {
 
     private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
         @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                connectionState = STATE_CONNECTED;
-                broadcast(ACTION_GATT_CONNECTED);
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                connectionState = STATE_DISCONNECTED;
-                broadcast(ACTION_GATT_DISCONNECTED);
-            }
-        }
-
-        @Override
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcast(ACTION_DATA_AVAILABLE, characteristic);
+                broadcast(characteristic);
             }
         }
-
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt,
-                                            BluetoothGattCharacteristic characteristic) {
-            broadcast(ACTION_DATA_AVAILABLE, characteristic);
-        }
-
-
     };
+
+    public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
+//        if (bluetoothAdapter == null || bluetoothGatt == null) {
+//            return;
+//        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+
+        }
+        bluetoothGatt.readCharacteristic(characteristic);
+    }
 
     class MyBinder extends Binder {
         public BLE getService(){
@@ -119,7 +111,7 @@ public class BLE extends Service {
         public void run() {
             if (!serviceStopped) { // Only allow the repeating timer while service is running (once service is stopped the flag state will change and the code inside the conditional statement here will not execute).
                 // Call the method that broadcasts the data to the Activity..
-//                broadcast();
+                broadcast(Step_data);
                 // Call "handler.postDelayed" again, after a specified delay.
                 handler.postDelayed(this, 1000);
             }
@@ -142,7 +134,8 @@ public class BLE extends Service {
     }
 
 
-    public void broadcast(){
+    public void broadcast(BluetoothGattCharacteristic characteristic){
+        readCharacteristic(characteristic);
         sendBroadcast(intent);
     }
 
