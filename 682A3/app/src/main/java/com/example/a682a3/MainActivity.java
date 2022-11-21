@@ -17,18 +17,30 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
-    BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-    BluetoothAdapter mBtAdapter = mBluetoothManager.getAdapter();
-    BluetoothGatt mBluetoothGatt;
+//    BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+//    BluetoothAdapter mBtAdapter = mBluetoothManager.getAdapter();
+//    BluetoothGatt mBluetoothGatt;
 
     private BLE.MyBinder mybinder;
     private BLE service;
     private Intent intent;
 
+    boolean isServiceStopped;
+    boolean StepAchieved;
+    boolean CAchieved;
+    boolean DAchieved;
 
+    int sgoal;
+    int cgoal;
+    int dgoal;
+
+    String countedStep;
 
 //    private BluetoothLeScanner bluetoothLeScanner = mBtAdapter.getBluetoothLeScanner();
 //    private boolean scanning;
@@ -39,8 +51,6 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName name, IBinder binder) {
             mybinder = (BLE.MyBinder) binder;
             service = mybinder.getService();
-//            service.initialize();
-//            service.connect(deviceAddress);
         }
 
         @Override
@@ -58,7 +68,17 @@ public class MainActivity extends AppCompatActivity {
 
         intent = new Intent(this, BLE.class);
         bindService(intent, conn, BIND_AUTO_CREATE);
+        registerReceiver(gattUpdateReceiver, new IntentFilter(BLE.ACTION_BROADCAST));
     }
+
+    public void Start(View v){
+
+    }
+
+    public void Stop(View v){
+        unregisterReceiver(gattUpdateReceiver);
+    }
+
 
     private BroadcastReceiver gattUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -67,21 +87,43 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        registerReceiver(gattUpdateReceiver, new IntentFilter(BLE.ACTION_BROADCAST));
-//        service.connect(deviceAddress);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(gattUpdateReceiver);
-    }
-
     private void updateViews(Intent intent){
+        countedStep = intent.getStringExtra("stepcount");
 
+        Log.d("main", String.format("step in main: %s", countedStep));
+
+        TextView CurrentSteps = findViewById(R.id.CurrentSteps);
+        TextView CurrentC = findViewById(R.id.CurrentC);
+        TextView CurrentD = findViewById(R.id.CurrentD);
+        CurrentSteps.setText(String.valueOf(countedStep));
+        CurrentC.setText(String.valueOf(Integer.valueOf(countedStep)*0.04));
+        CurrentD.setText(String.format("%.2f", Integer.valueOf(countedStep)*0.7));
+
+
+    }
+
+
+    public void Reset(View v){
+        TextView textView1 = findViewById(R.id.ShowStepGoal);
+        TextView textView2 = findViewById(R.id.ShowCGoal);
+        TextView textView3 = findViewById(R.id.ShowDGoal);
+        TextView CurrentSteps = findViewById(R.id.CurrentSteps);
+        TextView CurrentC = findViewById(R.id.CurrentC);
+        TextView CurrentD = findViewById(R.id.CurrentD);
+        textView1.setText("0");
+        textView2.setText("0");
+        textView3.setText("0");
+        CurrentSteps.setText("0");
+        CurrentC.setText("0");
+        CurrentD.setText("0");
+        StepAchieved = false;
+        CAchieved = false;
+        DAchieved = false;
+    }
+
+    protected void onDestroy(){
+        super.onDestroy();
+        unbindService(conn);
     }
 
 }
