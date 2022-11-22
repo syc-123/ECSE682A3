@@ -17,7 +17,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 
 import java.util.UUID;
@@ -31,28 +30,20 @@ public class BLE extends Service {
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattService bluetoothGattService;
     private BluetoothGattCharacteristic Step_data;
+    private BluetoothGattCharacteristic Reset;
 
     public static final String ACTION_BROADCAST = "com.example.a682a3.BROADCAST";
 
-    public final static String ACTION_GATT_CONNECTED =
-            "com.example.a682a3.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.a682a3.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_DATA_AVAILABLE =
-            "com.example.a682a3.ACTION_DATA_AVAILABLE";
-
-
-    private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTED = 2;
-
-    private int connectionState;
     private String deviceAddress = "84:2E:14:31:B3:7B";
     private  UUID step_service_UUID =
             UUID.fromString("8b85189a-69d4-11ed-a1eb-0242ac120002");
     private UUID step_char_UUID =
             UUID.fromString("d96279f2-69d6-11ed-a1eb-0242ac120002");
+    private UUID step_reset_UUID =
+            UUID.fromString("6cceaae6-6a89-11ed-a1eb-0242ac120002");
 
     private boolean connected = false;
+    private int reset_flag = 0;
 
 
     public void initialize() {
@@ -69,7 +60,6 @@ public class BLE extends Service {
         }
         bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallback);
         Log.d("debug", "Trying to create a new connection.");
-
     }
 
     private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
@@ -78,7 +68,6 @@ public class BLE extends Service {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 bluetoothGatt.discoverServices();
-
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
 
             }
@@ -109,21 +98,9 @@ public class BLE extends Service {
 
             } else {
                 Log.d("debug", "not discover service");
-
             }
         }
-
-
     };
-
-//    public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-//
-//        }
-//        Log.d("debug", "Read characteristic");
-//        bluetoothGatt.readCharacteristic(characteristic);
-//
-//    }
 
     class MyBinder extends Binder {
         public BLE getService(){
@@ -145,25 +122,21 @@ public class BLE extends Service {
         serviceStopped = false;
         Log.d("debug","on");
 
-
         handler.removeCallbacks(updateBroadcastData);
         handler.post(updateBroadcastData);
 
     }
 
     public int onStartCommand(Intent intent, int flag, int startId){
-
         return START_STICKY;
     }
 
     private Runnable updateBroadcastData = new Runnable() {
         public void run() {
-            if (!serviceStopped) { // Only allow the repeating timer while service is running (once service is stopped the flag state will change and the code inside the conditional statement here will not execute).
-                // Call the method that broadcasts the data to the Activity..
+            if (!serviceStopped) {
                 if(connected) {
                     bluetoothGatt.readCharacteristic(Step_data);
                 }
-                // Call "handler.postDelayed" again, after a specified delay.
                 handler.postDelayed(this, 1000);
             }
         }
@@ -178,18 +151,15 @@ public class BLE extends Service {
         return false;
     }
 
-
     public void onDestroy(){
         super.onDestroy();
     }
 
-
     @SuppressLint("MissingPermission")
     public void broadcast(BluetoothGattCharacteristic characteristic){
-
         int step_num = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16,0);
         Log.d("debug", String.format("step: %d", step_num));
-        intent.putExtra("stepcount",String.valueOf(step_num));
+        intent.putExtra("stepcount",step_num);
         sendBroadcast(intent);
     }
 
