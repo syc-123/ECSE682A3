@@ -43,8 +43,40 @@ public class BLE extends Service {
             UUID.fromString("6cceaae6-6a89-11ed-a1eb-0242ac120002");
 
     private boolean connected = false;
-    private int reset_flag = 0;
 
+    class MyBinder extends Binder {
+        public BLE getService(){
+            return BLE.this;
+        }
+    }
+
+    private MyBinder mybinder = new MyBinder();
+
+    public BLE() {
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mybinder;
+    }
+
+    public boolean onUnbind(Intent intent) {
+        return false;
+    }
+
+    public void onCreate(){
+        super.onCreate();
+        intent = new Intent(ACTION_BROADCAST);
+        initialize();
+        connect(deviceAddress);
+
+        serviceStopped = false;
+        Log.d("debug","on");
+
+        handler.removeCallbacks(updateBroadcastData);
+        handler.post(updateBroadcastData);
+
+    }
 
     public void initialize() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -63,27 +95,13 @@ public class BLE extends Service {
     }
 
     private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
-        @SuppressLint("MissingPermission")
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 bluetoothGatt.discoverServices();
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-
-            }
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {}
         }
 
-
-        @Override
-        public void onCharacteristicRead(BluetoothGatt gatt,
-                                         BluetoothGattCharacteristic characteristic,
-                                         int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcast(characteristic);
-            }
-        }
-
-        @SuppressLint("MissingPermission")
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -100,36 +118,16 @@ public class BLE extends Service {
                 Log.d("debug", "not discover service");
             }
         }
-    };
 
-    class MyBinder extends Binder {
-        public BLE getService(){
-            return BLE.this;
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcast(characteristic);
+            }
         }
-    }
-
-    private MyBinder mybinder = new MyBinder();
-
-    public BLE() {
-    }
-
-    public void onCreate(){
-        super.onCreate();
-        intent = new Intent(ACTION_BROADCAST);
-        initialize();
-        connect(deviceAddress);
-
-        serviceStopped = false;
-        Log.d("debug","on");
-
-        handler.removeCallbacks(updateBroadcastData);
-        handler.post(updateBroadcastData);
-
-    }
-
-    public int onStartCommand(Intent intent, int flag, int startId){
-        return START_STICKY;
-    }
+    };
 
     private Runnable updateBroadcastData = new Runnable() {
         public void run() {
@@ -142,25 +140,19 @@ public class BLE extends Service {
         }
     };
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mybinder;
-    }
-
-    public boolean onUnbind(Intent intent) {
-        return false;
-    }
-
-    public void onDestroy(){
-        super.onDestroy();
-    }
-
-    @SuppressLint("MissingPermission")
     public void broadcast(BluetoothGattCharacteristic characteristic){
         int step_num = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16,0);
         Log.d("debug", String.format("step: %d", step_num));
         intent.putExtra("stepcount",step_num);
         sendBroadcast(intent);
+    }
+
+    public int onStartCommand(Intent intent, int flag, int startId){
+        return START_STICKY;
+    }
+
+    public void onDestroy(){
+        super.onDestroy();
     }
 
 }
