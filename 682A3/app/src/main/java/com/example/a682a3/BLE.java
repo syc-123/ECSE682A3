@@ -108,9 +108,14 @@ public class BLE extends Service {
                 bluetoothGattService = bluetoothGatt.getService(step_service_UUID);
                 Log.d("debug", "discover service");
                 Step_data = bluetoothGattService.getCharacteristic(step_char_UUID);
-                Log.d("debug", "access characteristic");
+                Log.d("debug", "access stepdata characteristic");
+                Reset = bluetoothGattService.getCharacteristic(step_reset_UUID);
+                Log.d("debug", "access reset characteristic");
+                bluetoothGatt.readCharacteristic(Reset);
+                Log.d("debug", "-----------------------------");
 
                 bluetoothGatt.readCharacteristic(Step_data);
+
 
                 connected = true;
 
@@ -124,10 +129,29 @@ public class BLE extends Service {
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcast(characteristic);
+
+                if(step_char_UUID.equals(characteristic.getUuid())){
+                    broadcast(characteristic);
+                }
+                if(step_reset_UUID.equals(characteristic.getUuid())){
+                    int reset = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16,0);
+                    Log.d("debug", String.format("reset: %d", reset));
+                }
+
             }
         }
+
+        @Override
+        public void onCharacteristicWrite (BluetoothGatt gatt,
+                                           BluetoothGattCharacteristic characteristic,
+                                           int status){
+
+        }
+
+
+
     };
+
 
     private Runnable updateBroadcastData = new Runnable() {
         public void run() {
